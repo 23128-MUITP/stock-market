@@ -54,7 +54,7 @@ st.set_page_config(layout="wide")  # Enables full-width layout
 
 st.title("📈 Stock Price & MA Viewer")
 
-symbol = st.text_input("Enter the name of the stock (ALL CAPS):", value="SBIN")
+symbol = st.text_input("Enter the name of the stock (ALL CAPS):", value="RELIANCE")
 ma = st.number_input("Enter the length of moving average:", min_value=1, max_value=100, value=20)
 fullscreen = st.toggle("🖥️ Fullscreen Chart")
 
