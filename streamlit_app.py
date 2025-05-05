@@ -1,14 +1,15 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.graph_objs as go
 from datetime import date
 import os
 import streamlit as st
 from jugaad_data.nse import stock_df
 
-# Set a writable cache directory (important for Streamlit hosted environments)
+# Required for Streamlit's hosted environments
 os.environ["JUGAAD_DATA_DIR"] = "/tmp/jugaad_data_cache"
 
-# Fetch stock data
+# Fetch data
 def get_data(instr, ma):
     df = stock_df(symbol=instr, from_date=date(2024, 5, 5),
                   to_date=date(2025, 5, 5), series="EQ")
@@ -17,36 +18,62 @@ def get_data(instr, ma):
     df["DAILY_PCT_CHANGE"] = df["DAILY_PCT_CHANGE"].round(2)
     return df
 
-# Plot the chart using matplotlib + Streamlit
-def plot_stock_data(df):
-    df.sort_values('DATE', inplace=True)
-    symbol = df['SYMBOL'].iloc[0] if 'SYMBOL' in df.columns else "Stock"
+# Plot interactive chart with hover
+def plot_interactive(df, symbol, fullscreen=False):
+    fig = go.Figure()
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
-    fig.suptitle(f"{symbol} Price & Moving Average with Daily % Change", fontsize=16, fontweight='bold')
+    fig.add_trace(go.Scatter(x=df["DATE"], y=df["CLOSE"],
+                             mode='lines', name='Close Price',
+                             line=dict(color='dodgerblue')))
+    
+    fig.add_trace(go.Scatter(x=df["DATE"], y=df["MA_20"],
+                             mode='lines', name='20-Day MA',
+                             line=dict(color='orange', dash='dash')))
 
-    ax1.plot(df['DATE'], df['CLOSE'], label='Close Price', color='dodgerblue', linewidth=2)
-    ax1.plot(df['DATE'], df['MA_20'], label='20-Day MA', color='orange', linestyle='--', linewidth=2)
-    ax1.set_ylabel('Price')
-    ax1.legend(loc='upper left')
-    ax1.grid(True, alpha=0.3)
+    fig.add_trace(go.Bar(x=df["DATE"], y=df["DAILY_PCT_CHANGE"],
+                         name='Daily % Change',
+                         marker_color=['green' if x >= 0 else 'red' for x in df["DAILY_PCT_CHANGE"]],
+                         yaxis='y2', opacity=0.5))
 
-    ax2.bar(df['DATE'], df['DAILY_PCT_CHANGE'],
-            color=df['DAILY_PCT_CHANGE'].apply(lambda x: 'green' if x >= 0 else 'red'),
-            width=1.0)
-    ax2.axhline(0, color='black', linestyle='--', linewidth=0.8)
-    ax2.set_ylabel('Daily % Change')
-    ax2.set_xlabel('Date')
+    # Layout adjustments
+    fig.update_layout(
+        title=f"{symbol} Price & Moving Average with Daily % Change",
+        xaxis_title="Date",
+        yaxis=dict(title='Close Price / MA'),
+        yaxis2=dict(title='Daily % Change', overlaying='y', side='right', showgrid=False),
+        legend=dict(x=0, y=1),
+        height=800 if fullscreen else 600,
+        template='plotly_white',
+        hovermode='x unified'
+    )
 
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
 # ==== Streamlit App ====
+st.set_page_config(layout="wide")  # Enables full-width layout
+
 st.title("📈 Stock Price & MA Viewer")
 
 symbol = st.text_input("Enter the name of the stock (ALL CAPS):", value="RELIANCE")
 ma = st.number_input("Enter the length of moving average:", min_value=1, max_value=100, value=20)
+fullscreen = st.toggle("🖥️ Fullscreen Chart")
 
 if st.button("Generate Chart"):
     df = get_data(symbol, ma)
-    plot_stock_data(df)
+    df.sort_values('DATE', inplace=True)
+    
+    # Show interactive chart
+    plot_interactive(df, symbol, fullscreen)
+
+    # Show table
+    with st.expander("📋 View Raw Data"):
+        st.dataframe(df)
+
+    # Download button
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="⬇️ Download CSV",
+        data=csv,
+        file_name=f"{symbol}_data.csv",
+        mime='text/csv'
+    )
