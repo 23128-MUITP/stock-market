@@ -5,10 +5,10 @@ import os
 import streamlit as st
 from jugaad_data.nse import stock_df
 
-# Set safe cache directory for Streamlit environment
+# Set a writable cache directory (important for Streamlit hosted environments)
 os.environ["JUGAAD_DATA_DIR"] = "/tmp/jugaad_data_cache"
 
-# Fetch Data
+# Fetch stock data
 def get_data(instr, ma):
     df = stock_df(symbol=instr, from_date=date(2024, 5, 5),
                   to_date=date(2025, 5, 5), series="EQ")
@@ -17,12 +17,11 @@ def get_data(instr, ma):
     df["DAILY_PCT_CHANGE"] = df["DAILY_PCT_CHANGE"].round(2)
     return df
 
-# Plotting function
-def plot_saved_stock_data(df):
+# Plot the chart using matplotlib + Streamlit
+def plot_stock_data(df):
     df.sort_values('DATE', inplace=True)
     symbol = df['SYMBOL'].iloc[0] if 'SYMBOL' in df.columns else "Stock"
 
-    plt.style.use("seaborn-darkgrid")
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
     fig.suptitle(f"{symbol} Price & Moving Average with Daily % Change", fontsize=16, fontweight='bold')
 
@@ -50,4 +49,4 @@ ma = st.number_input("Enter the length of moving average:", min_value=1, max_val
 
 if st.button("Generate Chart"):
     df = get_data(symbol, ma)
-    plot_saved_stock_data(df)
+    plot_stock_data(df)
