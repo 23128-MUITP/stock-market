@@ -52,4 +52,4 @@ ma = st.number_input("Enter the length of moving average:", min_value=1, max_val
 
 if st.button("Generate Chart"):
     get_data(symbol, ma)
-    plot_saved_stock_data("DATA.csv")
+
