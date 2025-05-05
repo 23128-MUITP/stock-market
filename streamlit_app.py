@@ -9,7 +9,19 @@ from jugaad_data.nse import stock_df
 # Required for Streamlit's hosted environments
 os.environ["JUGAAD_DATA_DIR"] = "/tmp/jugaad_data_cache"
 
-# Fetch data
+# === Load company-ticker mapping ===
+@st.cache_data
+def load_symbol_data():
+    url = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+    df = pd.read_csv(url)
+    df = df[["SYMBOL", "NAME OF COMPANY"]]
+    df["DISPLAY"] = df["NAME OF COMPANY"] + " (" + df["SYMBOL"] + ")"
+    df.sort_values("NAME OF COMPANY", inplace=True)
+    return df
+
+symbol_df = load_symbol_data()
+
+# === Fetch data ===
 def get_data(instr, ma):
     df = stock_df(symbol=instr, from_date=date(2024, 5, 5),
                   to_date=date(2025, 5, 5), series="EQ")
@@ -18,7 +30,7 @@ def get_data(instr, ma):
     df["DAILY_PCT_CHANGE"] = df["DAILY_PCT_CHANGE"].round(2)
     return df
 
-# Plot interactive chart with hover
+# === Interactive plot ===
 def plot_interactive(df, symbol, fullscreen=False):
     fig = go.Figure()
 
@@ -35,7 +47,6 @@ def plot_interactive(df, symbol, fullscreen=False):
                          marker_color=['green' if x >= 0 else 'red' for x in df["DAILY_PCT_CHANGE"]],
                          yaxis='y2', opacity=0.5))
 
-    # Layout adjustments
     fig.update_layout(
         title=f"{symbol} Price & Moving Average with Daily % Change",
         xaxis_title="Date",
@@ -49,12 +60,14 @@ def plot_interactive(df, symbol, fullscreen=False):
 
     st.plotly_chart(fig, use_container_width=True)
 
-# ==== Streamlit App ====
-st.set_page_config(layout="wide")  # Enables full-width layout
-
+# === Streamlit App ===
+st.set_page_config(layout="wide")
 st.title("📈 Stock Price & MA Viewer")
 
-symbol = st.text_input("Enter the name of the stock (ALL CAPS):", value="RELIANCE")
+# ✅ Searchable dropdown
+selected_display = st.selectbox("Search for a stock (by name or symbol):", symbol_df["DISPLAY"])
+symbol = symbol_df[symbol_df["DISPLAY"] == selected_display]["SYMBOL"].values[0]
+
 ma = st.number_input("Enter the length of moving average:", min_value=1, max_value=100, value=20)
 fullscreen = st.toggle("🖥️ Fullscreen Chart")
 
@@ -62,14 +75,11 @@ if st.button("Generate Chart"):
     df = get_data(symbol, ma)
     df.sort_values('DATE', inplace=True)
     
-    # Show interactive chart
     plot_interactive(df, symbol, fullscreen)
 
-    # Show table
     with st.expander("📋 View Raw Data"):
         st.dataframe(df)
 
-    # Download button
     csv = df.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="⬇️ Download CSV",
