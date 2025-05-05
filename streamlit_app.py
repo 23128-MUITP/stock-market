@@ -5,6 +5,9 @@ import os
 import streamlit as st
 from jugaad_data.nse import stock_df
 
+os.environ["JUGAAD_DATA_DIR"] = "/tmp/jugaad_data_cache"
+
+
 
 def get_data(instr, ma):
     df = stock_df(symbol=instr, from_date=date(2024, 5, 5),
