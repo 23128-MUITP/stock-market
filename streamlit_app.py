@@ -5,21 +5,19 @@ import os
 import streamlit as st
 from jugaad_data.nse import stock_df
 
-os.environ["JUGAAD_DATA_DIR"] = "/tmp/jugaad_data_cache"
 
-
-
+df = None
 def get_data(instr, ma):
     df = stock_df(symbol=instr, from_date=date(2024, 5, 5),
                   to_date=date(2025, 5, 5), series="EQ")
     df["MA_20"] = df["CLOSE"].rolling(window=ma).mean()
     df["DAILY_PCT_CHANGE"] = df["CLOSE"].pct_change() * 100
     df["DAILY_PCT_CHANGE"] = df["DAILY_PCT_CHANGE"].round(2)
-    df.to_csv("DATA.csv")
 
 
-def plot_saved_stock_data(csv_path):
-    df = pd.read_csv(csv_path, parse_dates=['DATE'])
+
+def plot_saved_stock_data():
+
     df.sort_values('DATE', inplace=True)
     symbol = df['SYMBOL'].iloc[0] if 'SYMBOL' in df.columns else "Stock"
 
