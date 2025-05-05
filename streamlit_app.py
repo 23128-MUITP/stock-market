@@ -5,19 +5,20 @@ import os
 import streamlit as st
 from jugaad_data.nse import stock_df
 
+# Set safe cache directory for Streamlit environment
+os.environ["JUGAAD_DATA_DIR"] = "/tmp/jugaad_data_cache"
 
-df = None
+# Fetch Data
 def get_data(instr, ma):
     df = stock_df(symbol=instr, from_date=date(2024, 5, 5),
                   to_date=date(2025, 5, 5), series="EQ")
     df["MA_20"] = df["CLOSE"].rolling(window=ma).mean()
     df["DAILY_PCT_CHANGE"] = df["CLOSE"].pct_change() * 100
     df["DAILY_PCT_CHANGE"] = df["DAILY_PCT_CHANGE"].round(2)
+    return df
 
-
-
-def plot_saved_stock_data():
-
+# Plotting function
+def plot_saved_stock_data(df):
     df.sort_values('DATE', inplace=True)
     symbol = df['SYMBOL'].iloc[0] if 'SYMBOL' in df.columns else "Stock"
 
@@ -40,16 +41,13 @@ def plot_saved_stock_data():
 
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     st.pyplot(fig)
-    os.remove("DATA.csv")
-
 
 # ==== Streamlit App ====
-
 st.title("📈 Stock Price & MA Viewer")
 
 symbol = st.text_input("Enter the name of the stock (ALL CAPS):", value="RELIANCE")
 ma = st.number_input("Enter the length of moving average:", min_value=1, max_value=100, value=20)
 
 if st.button("Generate Chart"):
-    get_data(symbol, ma)
-
+    df = get_data(symbol, ma)
+    plot_saved_stock_data(df)
